@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Minimalist Calendar</title>
+    
+    <!-- FullCalendar Core & Google Calendar Plugin via CDN -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/google-calendar@6.1.11/index.global.min.js'></script>
+
+    <style>
+        /* ============================================================
+           1. BASE & NOTION DARK THEME INTEGRATION
+           ============================================================ */
+        :root {
+            --fc-border-color: #262626;
+            --fc-page-bg-color: #191919;
+            --fc-neutral-bg-color: #191919;
+            --fc-today-bg-color: rgba(255, 255, 255, 0.02);
+            --fc-now-indicator-color: #ea4e43; /* Sleek Notion Red */
+        }
+
+        * {
+            box-sizing: border-box;
+            /* Hide scrollbars for Firefox & IE/Edge */
+            scrollbar-width: none; 
+            -ms-overflow-style: none;
+        }
+
+        /* Hide Webkit Scrollbars but keep scroll functionality */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #191919;
+            color: rgba(255, 255, 255, 0.81);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            overflow: hidden; /* Prevent body scroll, let FullCalendar handle internal grid scroll */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #calendar {
+            height: 100vh;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+            position: relative;
+        }
+
+        /* ============================================================
+           2. LOCKED NAVIGATION (TOP-LEFT EMPTY BOX)
+           ============================================================ */
+        /* Force the time axis column to be exactly 65px wide to fit the buttons */
+        .fc-timegrid-axis {
+            width: 65px !important;
+            min-width: 65px !important;
+        }
+
+        /* Hide the default text in the top-left box */
+        .fc-timegrid-axis-cushion {
+            display: none !important;
+        }
+
+        /* Absolutely position the toolbar to perfectly overlay the top-left box */
+        .fc-header-toolbar {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 65px;
+            height: 41px; /* Matches standard day header height */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #191919;
+            border-right: 1px solid var(--fc-border-color);
+            border-bottom: 1px solid var(--fc-border-color);
+        }
+
+        /* Hide empty toolbar chunks */
+        .fc-toolbar-chunk:empty {
+            display: none;
+        }
+
+        /* Style the button group */
+        .fc-toolbar-chunk {
+            display: flex;
+            background: #252525;
+            border-radius: 4px;
+            padding: 2px;
+            border: 1px solid #2f2f2f;
+            gap: 2px;
+        }
+
+        .fc .fc-button-primary {
+            background: transparent !important;
+            border: none !important;
+            color: rgba(255, 255, 255, 0.5) !important;
+            font-family: inherit !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            text-transform: uppercase !important;
+            padding: 2px 6px !important;
+            min-width: 22px;
+            border-radius: 3px !important;
+            box-shadow: none !important;
+            transition: all 0.2s ease !important;
+            outline: none !important;
+        }
+
+        .fc .fc-button-primary:hover {
+            color: rgba(255, 255, 255, 0.9) !important;
+            background: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        .fc .fc-button-primary.fc-button-active {
+            background: #333333 !important;
+            color: rgba(255, 255, 255, 0.9) !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        /* ============================================================
+           3. GRID, TYPOGRAPHY & SLEEK DAY LABELS (DAY VIEW)
+           ============================================================ */
+        .fc-theme-standard td, .fc-theme-standard th {
+            border-color: var(--fc-border-color);
+        }
+
+        /* Increase physical length/height of each 30-min time slot */
+        .fc-timegrid-slot {
+            height: 50px !important; 
+        }
+
+        .fc-col-header-cell-cushion {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 12px 4px !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-decoration: none !important;
+            transition: color 0.2s ease;
+        }
+
+        .fc-col-header-cell-cushion:hover {
+            color: var(--fc-now-indicator-color);
+        }
+
+        .fc-timegrid-slot-label-cushion {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 11px;
+            font-weight: 400;
+            padding: 0 8px !important;
+        }
+
+        .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion {
+            color: rgba(255, 255, 255, 0.95);
+            font-weight: 600;
+        }
+
+        /* ============================================================
+           4. LIST VIEW STYLING & HORIZONTAL SCROLLING (WEEK VIEW)
+           ============================================================ */
+        .fc-list {
+            border: none !important;
+        }
+
+        /* Make list horizontally scrollable */
+        .fc-list-table {
+            min-width: 550px !important; /* Force min-width to trigger x-scroll when narrow */
+            table-layout: auto !important;
+            width: 100% !important;
+        }
+        .fc-view-harness, .fc-scroller {
+            overflow-x: auto !important;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .fc-view-harness::-webkit-scrollbar, .fc-scroller::-webkit-scrollbar {
+            display: none;
+        }
+
+        .fc-list-day-cushion {
+            background-color: #1e1e1e !important;
+            /* 75px left padding ensures the text clears the absolute top-left buttons */
+            padding: 12px 12px 12px 75px !important; 
+            border-bottom: 1px solid var(--fc-border-color) !important;
+            border-top: 1px solid var(--fc-border-color) !important;
+        }
+
+        .fc-list-day-text {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-decoration: none !important;
+            transition: color 0.2s ease;
+            cursor: pointer; /* Day headers still clickable */
+        }
+
+        .fc-list-day-text:hover {
+            color: var(--fc-now-indicator-color);
+        }
+
+        .fc-list-event td {
+            background-color: #191919 !important;
+            border-bottom: 1px solid #222 !important;
+            padding: 10px 0 !important; /* Reset padding for precise control */
+            color: rgba(255, 255, 255, 0.81);
+            transition: background-color 0.1s ease;
+            cursor: default !important; /* Unclickable state */
+        }
+
+        .fc-list-event:hover td {
+            background-color: #222222 !important;
+            cursor: default !important; /* Ensure it stays unclickable on hover */
+        }
+
+        /* Bring time and title closer together */
+        .fc-list-event .fc-list-event-time {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            font-weight: 500;
+            width: 1% !important; /* Auto fit tightly */
+            padding-left: 45px !important; /* Slightly more left than header */
+            padding-right: 15px !important; /* Close to dot */
+            white-space: nowrap;
+        }
+
+        .fc-list-event .fc-list-event-graphic {
+            width: 1% !important; /* Auto fit tightly */
+            padding: 10px 0 !important;
+        }
+
+        .fc-list-event .fc-list-event-title {
+            font-size: 12px;
+            font-weight: 500;
+            padding-left: 15px !important; /* Close to dot */
+            white-space: nowrap;
+        }
+
+        .fc-list-event-dot {
+            border-color: rgba(46, 60, 80, 0.85) !important; /* Match jewel tone */
+            border-width: 4px !important;
+        }
+
+        .fc-list-empty-cushion {
+            background-color: #191919 !important;
+            color: rgba(255, 255, 255, 0.3) !important;
+            font-family: inherit;
+            padding: 40px !important;
+            font-size: 12px;
+        }
+
+        /* ============================================================
+           5. DARK THEME EVENT COLOR PALETTE & STATES (DAY VIEW)
+           ============================================================ */
+        .fc-v-event {
+            background-color: rgba(46, 60, 80, 0.85) !important; /* Deep muted jewel tone */
+            border: 1px solid rgba(70, 87, 112, 0.9) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+            transition: transform 0.1s ease, filter 0.1s ease;
+            cursor: default !important; /* Unclickable state */
+        }
+
+        .fc-v-event:hover {
+            filter: brightness(1.15);
+            transform: scale(1.01);
+            z-index: 5 !important;
+        }
+
+        .fc-event-main {
+            color: #e2e8f0 !important;
+            padding: 2px 4px !important; /* Tightened slightly so short events text fits cleanly */
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .fc-event-time {
+            font-size: 10px !important;
+            font-weight: 600 !important;
+            opacity: 0.75 !important;
+        }
+
+        .fc-event-title {
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            line-height: 1.2 !important;
+            white-space: normal !important;
+        }
+
+        /* ============================================================
+           6. CURRENT TIME INDICATOR
+           ============================================================ */
+        .fc-timegrid-now-indicator-line {
+            border-color: var(--fc-now-indicator-color) !important;
+            border-width: 1px !important;
+        }
+
+        .fc-timegrid-now-indicator-arrow {
+            border-color: var(--fc-now-indicator-color) !important;
+            border-width: 4px !important;
+            border-top-color: transparent !important;
+            border-bottom-color: transparent !important;
+        }
+        
+        .fc-scrollgrid-section-header > td {
+            border-bottom: 1px solid var(--fc-border-color) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="calendar"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            let initialScrollDone = false; // Tracks initial scroll state
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                // 1. Core Setup & Views
+                initialView: 'timeGridDay', // Start strictly on Day View
+                height: '100%',
+                
+                // 2. Locked Navigation (Top-Left Box)
+                headerToolbar: {
+                    left: '',
+                    center: 'timeGridDay,listWeek',
+                    right: ''
+                },
+                
+                // 3. Hidden Weekends
+                weekends: false,
+                
+                // 4. Current Time Indicator
+                nowIndicator: true,
+
+                // 5. Clickable Day Titles (NavLinks)
+                navLinks: true,
+                navLinkDayClick: 'timeGridDay',
+                
+                // 6. Google Calendar API Integration
+                googleCalendarApiKey: 'AIzaSyBPZXqq6Tk_G0pI4jomdwdQJ7IuvlTATWw',
+                events: 'ellisbish@gmail.com',
+                
+                // 7. Sleek Formatting & Layout
+                allDaySlot: false,
+                slotEventOverlap: false, /* Pushes concurrent events (same exact time) side-by-side */
+                slotDuration: '00:30:00',
+                slotLabelInterval: '00:30:00', /* Fills the empty space by showing the time every 30 minutes */
+                dayHeaderFormat: { weekday: 'short', day: 'numeric' },
+                slotLabelFormat: {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    omitZeroMinute: false,
+                    meridiem: 'short'
+                },
+                
+                // 8. View specific overrides
+                views: {
+                    timeGridDay: {
+                        buttonText: 'D'
+                    },
+                    listWeek: {
+                        buttonText: 'W',
+                        listDayFormat: { weekday: 'long', month: 'long', day: 'numeric' },
+                        listDaySideFormat: false 
+                    }
+                },
+
+                // Keep events strictly unclickable so you don't get trapped in 403 pages
+                eventClick: function(info) {
+                    info.jsEvent.preventDefault(); 
+                },
+
+                // Handle initial presentation / intelligent view scrolling
+                eventsSet: function(events) {
+                    if (!initialScrollDone && calendar.view.type === 'timeGridDay') {
+                        initialScrollDone = true;
+                        
+                        setTimeout(() => {
+                            let now = new Date();
+                            let todayEvents = events.filter(e => {
+                                return e.start && 
+                                       e.start.getDate() === now.getDate() && 
+                                       e.start.getMonth() === now.getMonth() && 
+                                       e.start.getFullYear() === now.getFullYear();
+                            });
+                            
+                            if (todayEvents.length > 0) {
+                                todayEvents.sort((a, b) => a.start - b.start);
+                                let firstEventStart = todayEvents[0].start;
+                                
+                                if (now < firstEventStart) {
+                                    // Early morning (before first event): Scroll to give 30m blank padding above event
+                                    let scrollDate = new Date(firstEventStart.getTime() - 30 * 60000);
+                                    let hours = scrollDate.getHours().toString().padStart(2, '0');
+                                    let minutes = scrollDate.getMinutes().toString().padStart(2, '0');
+                                    calendar.scrollToTime(`${hours}:${minutes}:00`);
+                                } else {
+                                    // Later in day (past first event): Frame current time in view
+                                    let scrollDate = new Date(now.getTime() - 30 * 60000);
+                                    let hours = scrollDate.getHours().toString().padStart(2, '0');
+                                    let minutes = scrollDate.getMinutes().toString().padStart(2, '0');
+                                    calendar.scrollToTime(`${hours}:${minutes}:00`);
+                                }
+                            } else {
+                                // No events today: Frame current time 
+                                let scrollDate = new Date(now.getTime() - 30 * 60000);
+                                let hours = scrollDate.getHours().toString().padStart(2, '0');
+                                let minutes = scrollDate.getMinutes().toString().padStart(2, '0');
+                                calendar.scrollToTime(`${hours}:${minutes}:00`);
+                            }
+                        }, 50);
+                    }
+                }
+            });
+
+            calendar.render();
+        });
+    </script>
+</body>
+</html>
